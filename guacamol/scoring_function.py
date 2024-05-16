@@ -5,6 +5,8 @@ from typing import List, Optional
 import numpy as np
 from rdkit import Chem
 
+from dnptools import scoringservice
+
 from guacamol.utils.chemistry import smiles_to_rdkit_mol
 from guacamol.score_modifier import ScoreModifier, LinearModifier
 from guacamol.utils.math import geometric_mean
@@ -24,13 +26,14 @@ class ScoringFunction:
     In general, do not inherit directly from this class. Prefer `MoleculewiseScoringFunction` or `BatchScoringFunction`.
     """
 
-    def __init__(self, score_modifier: ScoreModifier = None) -> None:
+    def __init__(self, id: str, score_modifier: ScoreModifier = None) -> None:
         """
         Args:
             score_modifier: Modifier to apply to the score. If None, will be LinearModifier()
         """
         self.score_modifier = score_modifier
         self.corrupt_score = -1.0
+        self.id = id
 
     @property
     def score_modifier(self):
@@ -49,6 +52,7 @@ class ScoringFunction:
         Score a single molecule as smiles
         """
         raise NotImplementedError
+
 
     @abstractmethod
     def score_list(self, smiles_list: List[str]) -> List[float]:
@@ -75,12 +79,12 @@ class MoleculewiseScoringFunction(ScoringFunction):
     Derived classes must only implement the `raw_score` function.
     """
 
-    def __init__(self, score_modifier: ScoreModifier = None) -> None:
+    def __init__(self, id: str, score_modifier: ScoreModifier = None) -> None:
         """
         Args:
             score_modifier: Modifier to apply to the score. If None, will be LinearModifier()
         """
-        super().__init__(score_modifier=score_modifier)
+        super().__init__(id=id, score_modifier=score_modifier)
 
     def score(self, smiles: str) -> float:
         try:
@@ -114,12 +118,12 @@ class BatchScoringFunction(ScoringFunction):
     Derived classes must only implement the `raw_score_list` function.
     """
 
-    def __init__(self, score_modifier: ScoreModifier = None) -> None:
+    def __init__(self, id, score_modifier: ScoreModifier = None) -> None:
         """
         Args:
             score_modifier: Modifier to apply to the score. If None, will be LinearModifier()
         """
-        super().__init__(score_modifier=score_modifier)
+        super().__init__(id=id, score_modifier=score_modifier)
 
     def score(self, smiles: str) -> float:
         return self.score_list([smiles])[0]
@@ -155,9 +159,15 @@ class ScoringFunctionBasedOnRdkitMol(MoleculewiseScoringFunction):
     Derived classes must implement the `score_mol` function.
     """
 
+    def __init__(self, id: str, score_modifier: ScoreModifier = None) -> None:
+        """
+        Args:
+            score_modifier: Modifier to apply to the score. If None, will be LinearModifier()
+        """
+        super().__init__(id=id, score_modifier=score_modifier)
+
     def raw_score(self, smiles: str) -> float:
         mol = smiles_to_rdkit_mol(smiles)
-
         if mol is None:
             raise InvalidMolecule
 
@@ -179,13 +189,13 @@ class ArithmeticMeanScoringFunction(BatchScoringFunction):
     Scoring function that combines multiple scoring functions linearly.
     """
 
-    def __init__(self, scoring_functions: List[ScoringFunction], weights=None) -> None:
+    def __init__(self, id: str, scoring_functions: List[ScoringFunction], weights=None) -> None:
         """
         Args:
             scoring_functions: scoring functions to combine
             weights: weight for the corresponding scoring functions. If None, all will have the same weight.
         """
-        super().__init__()
+        super().__init__(id=id)
 
         self.scoring_functions = scoring_functions
         number_scoring_functions = len(scoring_functions)
@@ -210,12 +220,12 @@ class GeometricMeanScoringFunction(MoleculewiseScoringFunction):
     Scoring function that combines multiple scoring functions multiplicatively.
     """
 
-    def __init__(self, scoring_functions: List[ScoringFunction]) -> None:
+    def __init__(self, id: str, scoring_functions: List[ScoringFunction]) -> None:
         """
         Args:
             scoring_functions: scoring functions to combine
         """
-        super().__init__()
+        super().__init__(id=id)
 
         self.scoring_functions = scoring_functions
 
@@ -233,11 +243,12 @@ class ScoringFunctionWrapper(ScoringFunction):
     """
 
     def __init__(self, scoring_function: ScoringFunction) -> None:
-        super().__init__()
+        super().__init__(id=scoring_function.id)
         self.scoring_function = scoring_function
         self.evaluations = 0
 
-    def score(self, smiles):
+    def score(self, json_msg):
+        smiles = json_msg[scoringservice.JSON_KEY_SMILES]
         self._increment_evaluation_count(1)
         return self.scoring_function.score(smiles)
 

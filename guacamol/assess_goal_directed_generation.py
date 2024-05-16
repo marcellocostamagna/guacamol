@@ -57,17 +57,22 @@ def _evaluate_goal_directed_benchmarks(goal_directed_molecule_generator: GoalDir
     """
 
     logger.info(f'Number of benchmarks: {len(benchmarks)}')
-
+    benchmarks_success = 0
     results = []
     for i, benchmark in enumerate(benchmarks, 1):
         logger.info(f'Running benchmark {i}/{len(benchmarks)}: {benchmark.name}')
-        result = benchmark.assess_model(goal_directed_molecule_generator)
-        logger.info(f'Results for the benchmark "{result.benchmark_name}":')
-        logger.info(f'  Score: {result.score:.6f}')
-        logger.info(f'  Execution time: {str(datetime.timedelta(seconds=int(result.execution_time)))}')
-        logger.info(f'  Metadata: {result.metadata}')
-        results.append(result)
+        success, result = benchmark.assess_model(goal_directed_molecule_generator, i)
+        # result = benchmark.assess_model(goal_directed_molecule_generator, i)
+        if success:
+            benchmarks_success += 1
+            logger.info(f'Results for the benchmark "{result.benchmark_name}":')
+            logger.info(f'  Score: {result.score:.6f}')
+            logger.info(f'  Execution time: {str(datetime.timedelta(seconds=int(result.execution_time)))}')
+            logger.info(f'  Metadata: {result.metadata}')
+            results.append(result)
+        else: 
+            logger.error(f'Failed to execute benchmark "{benchmark.name}" due to: {result}')
 
     logger.info('Finished execution of the benchmarks')
-
+    print(f'Number of successful benchmarks: {benchmarks_success}/{len(benchmarks)}')
     return results

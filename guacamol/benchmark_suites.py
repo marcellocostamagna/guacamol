@@ -105,8 +105,8 @@ def goal_directed_suite_v2() -> List[GoalDirectedBenchmark]:
                    fp_type='AP', threshold=0.75),
 
         # isomers
-        isomers_c11h24(),
-        isomers_c9h10n2o2pf2cl(),
+        # isomers_c11h24(),
+        # isomers_c9h10n2o2pf2cl(),
 
         # median molecules
         median_camphor_menthol(),
