@@ -1,10 +1,9 @@
 import io
 import re
 from os import path
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # Get the version from guacamol/__init__.py
-# Adapted from https://stackoverflow.com/a/39671214
 __version__ = re.search(r'__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
                         io.open('guacamol/__init__.py', encoding='utf_8_sig').read()
                         ).group(1)
@@ -15,13 +14,11 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(name='guacamol',
       version=__version__,
-      author='BenevolentAI',
-      author_email='guacamol@benevolent.ai',
-      description='Guacamol: benchmarks for de novo molecular design',
+      author='Marcello Costamagna',
+      description='Package to run the Guacamol Benchmarks with DENOPTIM',
       long_description=long_description,
       long_description_content_type='text/markdown',
-      url='https://github.com/BenevolentAI/guacamol',
-      packages=['guacamol', 'guacamol.data', 'guacamol.utils'],
+      packages=find_packages(exclude=["tests", "tests.*"]),
       license='MIT',
       install_requires=[
           'joblib>=0.12.5',
