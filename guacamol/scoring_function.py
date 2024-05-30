@@ -7,7 +7,7 @@ from rdkit import Chem
 
 from dnptools import scoringservice
 
-from guacamol.utils.chemistry import smiles_to_rdkit_mol
+from guacamol.utils.chemistry import smiles_to_rdkit_mol, canonicalize
 from guacamol.score_modifier import ScoreModifier, LinearModifier
 from guacamol.utils.math import geometric_mean
 
@@ -126,9 +126,13 @@ class BatchScoringFunction(ScoringFunction):
         super().__init__(id=id, score_modifier=score_modifier)
 
     def score(self, smiles: str) -> float:
+        # Canonicalize smiles
+        smiles = canonicalize(smiles)
         return self.score_list([smiles])[0]
 
     def score_list(self, smiles_list: List[str]) -> List[float]:
+        # Canonicalize smiles
+        smiles_list = [canonicalize(smiles) for smiles in smiles_list]
         raw_scores = self.raw_score_list(smiles_list)
 
         scores = [self.corrupt_score if raw_score is None
@@ -212,6 +216,9 @@ class ArithmeticMeanScoringFunction(BatchScoringFunction):
 
         scores = np.array(scores).sum(axis=0) / np.sum(self.weights)
 
+        # If scores are None transform the to 0
+        scores = np.array([0 if score is None else score for score in scores])
+        
         return list(scores)
 
 
